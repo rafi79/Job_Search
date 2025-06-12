@@ -1694,7 +1694,6 @@ Dean's List, University of Dhaka (2011-2013)"""
     """, unsafe_allow_html=True)
 
 # Additional utility functions
-@st.cache_data
 def load_sample_cv_info():
     """Load sample CV information for demo purposes"""
     return {
@@ -1710,6 +1709,46 @@ def load_sample_cv_info():
             'Comparative Study of AI Algorithms'
         ]
     }
+
+def get_sample_cv_text():
+    """Get sample CV text for demonstration"""
+    return """Dr. Sarah Ahmed
+Email: sarah.ahmed@example.com
+Phone: +880-1234-567890
+
+Education:
+PhD in Computer Science, University of Cambridge, UK (2019)
+MSc in Artificial Intelligence, MIT, USA (2015)
+BSc in Computer Science, University of Dhaka, Bangladesh (2013)
+
+Research Experience:
+Postdoctoral Research Fellow, AI Lab, Cambridge University (2019-2022)
+Research Assistant, Computer Vision Lab, MIT (2015-2019)
+
+Teaching Experience:
+Guest Lecturer, Advanced Machine Learning, Cambridge University (2020-2022)
+Teaching Assistant, Introduction to AI, MIT (2016-2018)
+
+Publications:
+1. Deep Learning Approaches for Bangla Natural Language Processing, Nature Machine Intelligence, 2022
+2. Computer Vision Applications in Healthcare: A Comprehensive Survey, IEEE Transactions on Medical Imaging, 2021
+3. Federated Learning for Privacy-Preserving AI, ICML 2020
+4. Transfer Learning in Low-Resource Languages, ACL 2019
+
+Research Interests:
+Natural Language Processing, Computer Vision, Machine Learning, Deep Learning, Artificial Intelligence
+
+Skills:
+Programming: Python, R, Java, C++
+Machine Learning: TensorFlow, PyTorch, Scikit-learn
+Research: Statistical Analysis, Data Analysis, Research Methodology
+Teaching: Curriculum Development, Course Design, Student Assessment
+Languages: English (Fluent), Bengali (Native), Hindi (Conversational)
+
+Awards:
+Best Paper Award, ICML 2020
+Cambridge Trust Scholarship (2016-2019)
+Dean's List, University of Dhaka (2011-2013)"""
 
 def display_help_section():
     """Display help and tips for using the application"""
