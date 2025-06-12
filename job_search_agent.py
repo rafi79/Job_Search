@@ -1,5 +1,4 @@
 import streamlit as st
-import fitz  # PyMuPDF for PDF processing
 import re
 import asyncio
 import tempfile
@@ -9,6 +8,20 @@ import time
 from datetime import datetime
 from typing import Dict, List, Any
 import pandas as pd
+
+# Try to import PDF processing libraries with fallbacks
+try:
+    import fitz  # PyMuPDF for PDF processing
+    PDF_PROCESSING_AVAILABLE = True
+    PDF_LIBRARY = 'pymupdf'
+except ImportError:
+    try:
+        import PyPDF2
+        PDF_PROCESSING_AVAILABLE = True
+        PDF_LIBRARY = 'pypdf2'
+    except ImportError:
+        PDF_PROCESSING_AVAILABLE = False
+        PDF_LIBRARY = None
 
 # Try to import Exa, fall back to mock if not available
 try:
@@ -24,6 +37,35 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Show dependency status
+if not PDF_PROCESSING_AVAILABLE:
+    st.error("""
+    **⚠️ PDF processing libraries not found!**
+    
+    To process PDF files, install one of these packages:
+    ```
+    pip install PyMuPDF
+    ```
+    or
+    ```
+    pip install PyPDF2
+    ```
+    
+    For now, you can use the **text input option** to paste your CV content.
+    """)
+
+if not EXA_AVAILABLE:
+    st.warning("""
+    **ℹ️ Exa package not found**
+    
+    To use real web crawling, install:
+    ```
+    pip install exa_py
+    ```
+    
+    The app will run in **demo mode** with mock data.
+    """)
 
 # Initialize session state
 if 'workflow_step' not in st.session_state:
@@ -55,11 +97,17 @@ class AcademicCVAnalyzer:
             'skills': ['programming', 'analysis', 'methodology', 'statistics', 'software']
         }
     
-    def extract_cv_data(self, pdf_path: str) -> Dict:
-        """Extract structured data from academic CV PDF"""
+    def extract_cv_data(self, pdf_path: str = None, text_input: str = None) -> Dict:
+        """Extract structured data from academic CV PDF or text input"""
         try:
-            # Step 1: Extract text from PDF
-            text = self.extract_text_from_pdf(pdf_path)
+            if text_input:
+                # Use provided text input
+                text = text_input
+            elif pdf_path and PDF_PROCESSING_AVAILABLE:
+                # Extract text from PDF
+                text = self.extract_text_from_pdf(pdf_path)
+            else:
+                raise Exception("No valid input provided or PDF processing not available")
             
             # Step 2: Analyze academic profile
             profile = {
@@ -79,20 +127,42 @@ class AcademicCVAnalyzer:
             return {}
     
     def extract_text_from_pdf(self, pdf_path: str) -> str:
-        """Extract text from PDF using PyMuPDF"""
+        """Extract text from PDF using available library"""
         try:
-            doc = fitz.open(pdf_path)
-            text = ""
-            
-            for page_num in range(len(doc)):
-                page = doc.load_page(page_num)
-                text += page.get_text()
-            
-            doc.close()
-            return text.strip()
-            
+            if PDF_LIBRARY == 'pymupdf':
+                return self._extract_with_pymupdf(pdf_path)
+            elif PDF_LIBRARY == 'pypdf2':
+                return self._extract_with_pypdf2(pdf_path)
+            else:
+                raise Exception("No PDF processing library available")
         except Exception as e:
             raise Exception(f"Failed to extract text from PDF: {str(e)}")
+    
+    def _extract_with_pymupdf(self, pdf_path: str) -> str:
+        """Extract text using PyMuPDF"""
+        doc = fitz.open(pdf_path)
+        text = ""
+        
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            text += page.get_text()
+        
+        doc.close()
+        return text.strip()
+    
+    def _extract_with_pypdf2(self, pdf_path: str) -> str:
+        """Extract text using PyPDF2"""
+        import PyPDF2
+        
+        text = ""
+        with open(pdf_path, 'rb') as file:
+            pdf_reader = PyPDF2.PdfReader(file)
+            
+            for page_num in range(len(pdf_reader.pages)):
+                page = pdf_reader.pages[page_num]
+                text += page.extract_text()
+        
+        return text.strip()
     
     def extract_personal_info(self, text: str) -> Dict:
         """Extract personal information from CV"""
@@ -477,7 +547,7 @@ class AcademicJobSearchAgent:
         self.exa = exa_client
         self.memory = {}
     
-    async def comprehensive_academic_job_search(self, cv_pdf_path: str, preferences: Dict) -> Dict:
+    async def comprehensive_academic_job_search(self, cv_pdf_path: str = None, cv_text: str = None, preferences: Dict = None) -> Dict:
         """Complete academic job search workflow"""
         
         workflow_results = {
@@ -490,7 +560,7 @@ class AcademicJobSearchAgent:
         try:
             # Step 1: Analyze uploaded CV
             st.session_state.workflow_step = 'analyzing'
-            cv_profile = self.cv_analyzer.extract_cv_data(cv_pdf_path)
+            cv_profile = self.cv_analyzer.extract_cv_data(pdf_path=cv_pdf_path, text_input=cv_text)
             workflow_results['step_1_analysis'] = cv_profile
             st.session_state.cv_analysis = cv_profile
             
@@ -509,7 +579,7 @@ class AcademicJobSearchAgent:
             # Step 4: Intelligent matching and recommendations
             st.session_state.workflow_step = 'matching'
             recommendations = self.generate_academic_recommendations(
-                cv_profile, job_opportunities, preferences
+                cv_profile, job_opportunities, preferences or {}
             )
             workflow_results['step_4_matching'] = recommendations
             st.session_state.recommendations = recommendations
@@ -1381,36 +1451,96 @@ def main():
     # Main interface
     st.header("📄 Upload Your Academic CV")
     
-    uploaded_file = st.file_uploader(
-        "Choose your CV (PDF format)",
-        type=['pdf'],
-        help="Upload your academic CV in PDF format for analysis"
-    )
+    # Create tabs for different input methods
+    tab1, tab2 = st.tabs(["📄 Upload PDF", "📝 Paste Text"])
+    
+    uploaded_file = None
+    cv_text = None
+    
+    with tab1:
+        if PDF_PROCESSING_AVAILABLE:
+            uploaded_file = st.file_uploader(
+                "Choose your CV (PDF format)",
+                type=['pdf'],
+                help="Upload your academic CV in PDF format for analysis"
+            )
+        else:
+            st.error("PDF processing not available. Please use the 'Paste Text' tab instead.")
+            st.info("Install PyMuPDF or PyPDF2 to enable PDF upload: `pip install PyMuPDF`")
+    
+    with tab2:
+        cv_text = st.text_area(
+            "Paste your CV content here",
+            height=300,
+            placeholder="""Paste the text content of your CV here. Include:
+            
+- Personal information (name, email, phone)
+- Education (degrees, institutions, years)
+- Research experience and publications
+- Teaching experience
+- Skills and specializations
+
+Example:
+Dr. John Doe
+Email: john.doe@example.com
+Phone: +880-XXX-XXXX
+
+Education:
+PhD in Computer Science, University of Cambridge (2018)
+MSc in Software Engineering, MIT (2014)
+
+Research Experience:
+Research Fellow, AI Lab, Cambridge University (2018-2022)
+
+Publications:
+1. "Deep Learning for Natural Language Processing", Nature AI Journal, 2021
+2. "Machine Learning in Healthcare", IEEE Transactions, 2020
+
+Skills: Python, Research Methodology, Statistical Analysis, Teaching
+""",
+            help="Copy and paste your CV text content here"
+        )
     
     # Display workflow status
     display_workflow_status()
     
-    if uploaded_file is not None:
-        # Display CV preview
-        st.success(f"✅ CV uploaded: {uploaded_file.name} ({uploaded_file.size} bytes)")
+    # Check if we have input
+    has_input = (uploaded_file is not None) or (cv_text and cv_text.strip())
+    
+    if has_input:
+        if uploaded_file:
+            # Display CV preview for uploaded file
+            st.success(f"✅ CV uploaded: {uploaded_file.name} ({uploaded_file.size} bytes)")
+            
+            # Show file details
+            with st.expander("📄 File Details"):
+                st.write(f"**Filename:** {uploaded_file.name}")
+                st.write(f"**File size:** {uploaded_file.size:,} bytes")
+                st.write(f"**File type:** {uploaded_file.type}")
         
-        # Show file details
-        with st.expander("📄 File Details"):
-            st.write(f"**Filename:** {uploaded_file.name}")
-            st.write(f"**File size:** {uploaded_file.size:,} bytes")
-            st.write(f"**File type:** {uploaded_file.type}")
+        if cv_text:
+            # Display text preview
+            st.success(f"✅ CV text provided ({len(cv_text)} characters)")
+            
+            # Show text preview
+            with st.expander("📄 Text Preview"):
+                st.text_area("CV Content Preview", cv_text[:500] + "..." if len(cv_text) > 500 else cv_text, height=150, disabled=True)
         
         # Process button
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             if st.button("🚀 Start Academic Job Search", type="primary", use_container_width=True):
                 
-                # Save uploaded file temporarily
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-                    tmp_file.write(uploaded_file.getvalue())
-                    cv_path = tmp_file.name
+                cv_path = None
                 
                 try:
+                    # Handle file upload if provided
+                    if uploaded_file:
+                        # Save uploaded file temporarily
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                            tmp_file.write(uploaded_file.getvalue())
+                            cv_path = tmp_file.name
+                    
                     # Initialize agent
                     exa = init_exa()
                     agent = AcademicJobSearchAgent(exa)
@@ -1419,12 +1549,16 @@ def main():
                     progress_placeholder = st.empty()
                     
                     with progress_placeholder.container():
-                        with st.spinner("🧠 Analyzing your CV..."):
+                        with st.spinner("🧠 Processing your academic profile..."):
                             # Execute comprehensive search
                             loop = asyncio.new_event_loop()
                             asyncio.set_event_loop(loop)
                             results = loop.run_until_complete(
-                                agent.comprehensive_academic_job_search(cv_path, preferences)
+                                agent.comprehensive_academic_job_search(
+                                    cv_pdf_path=cv_path, 
+                                    cv_text=cv_text, 
+                                    preferences=preferences
+                                )
                             )
                             loop.close()
                     
@@ -1451,8 +1585,67 @@ def main():
                 
                 finally:
                     # Clean up temporary file
-                    if os.path.exists(cv_path):
+                    if cv_path and os.path.exists(cv_path):
                         os.unlink(cv_path)
+    else:
+        # Show instructions when no input
+        st.info("👆 Please upload a PDF file or paste your CV text content to begin the search.")
+        
+        # Sample CV text for demonstration
+        if st.button("📝 Use Sample CV Text"):
+            sample_cv = """Dr. Sarah Ahmed
+Email: sarah.ahmed@example.com
+Phone: +880-1234-567890
+
+Education:
+PhD in Computer Science, University of Cambridge, UK (2019)
+MSc in Artificial Intelligence, MIT, USA (2015)
+BSc in Computer Science, University of Dhaka, Bangladesh (2013)
+
+Research Experience:
+Postdoctoral Research Fellow, AI Lab, Cambridge University (2019-2022)
+Research Assistant, Computer Vision Lab, MIT (2015-2019)
+
+Teaching Experience:
+Guest Lecturer, Advanced Machine Learning, Cambridge University (2020-2022)
+Teaching Assistant, Introduction to AI, MIT (2016-2018)
+
+Publications:
+1. "Deep Learning Approaches for Bangla Natural Language Processing", Nature Machine Intelligence, 2022
+2. "Computer Vision Applications in Healthcare: A Comprehensive Survey", IEEE Transactions on Medical Imaging, 2021
+3. "Federated Learning for Privacy-Preserving AI", ICML 2020
+4. "Transfer Learning in Low-Resource Languages", ACL 2019
+
+Research Interests:
+Natural Language Processing, Computer Vision, Machine Learning, Deep Learning, Artificial Intelligence
+
+Skills:
+Programming: Python, R, Java, C++
+Machine Learning: TensorFlow, PyTorch, Scikit-learn
+Research: Statistical Analysis, Data Analysis, Research Methodology
+Teaching: Curriculum Development, Course Design, Student Assessment
+Languages: English (Fluent), Bengali (Native), Hindi (Conversational)
+
+Awards:
+Best Paper Award, ICML 2020
+Cambridge Trust Scholarship (2016-2019)
+Dean's List, University of Dhaka (2011-2013)"""
+            
+            st.session_state['sample_cv_text'] = sample_cv
+            st.rerun()
+        
+        # Use the sample CV if it was just loaded
+        if 'sample_cv_text' in st.session_state:
+            cv_text = st.session_state['sample_cv_text']
+            with tab2:
+                st.text_area(
+                    "Sample CV loaded - you can edit this or use as-is:",
+                    value=cv_text,
+                    height=300,
+                    key="sample_cv_display"
+                )
+            # Remove the sample from session state after showing
+            del st.session_state['sample_cv_text']
     
     # Display results if available
     if st.session_state.workflow_step in ['analyzing', 'researching', 'searching', 'matching', 'complete']:
@@ -1657,23 +1850,72 @@ if __name__ == "__main__":
 
 # Requirements for the application
 """
-Required packages for this application:
+UPDATED Requirements for this application:
 
+# Minimal requirements (always needed):
 pip install streamlit
-pip install PyMuPDF  # for PDF processing
-pip install exa_py   # for web crawling (optional)
-pip install pandas   # for data handling
-pip install asyncio  # for async operations
+pip install pandas
+
+# PDF processing (choose one):
+pip install PyMuPDF      # Recommended - better text extraction
+# OR
+pip install PyPDF2       # Alternative - basic PDF support
+
+# Web crawling (optional - enables real data):
+pip install exa_py       # For real web crawling and job search
+
+# Alternative minimal install for testing:
+pip install streamlit pandas
+# This will run in demo mode with text input and mock data
 
 To run the application:
 streamlit run academic_job_search_agent.py
 
 Features included:
-✅ Complete PDF CV processing
-✅ Bangladesh university research
+✅ Flexible CV input (PDF upload OR text paste)
+✅ Graceful dependency handling with fallbacks
+✅ Bangladesh university research with mock data
 ✅ Academic job position matching
-✅ Intelligent recommendation system
-✅ Real-time web crawling (with Exa AI)
+✅ Intelligent recommendation system  
+✅ Real-time web crawling (with Exa AI) OR demo mode
+✅ Interactive Streamlit interface with tabs
+✅ Progress tracking and status updates
+✅ Error handling and recovery
+✅ Sample CV data for testing
+✅ Help documentation with dependency status
+✅ Session state management
+✅ Comprehensive result display
+✅ Works with minimal dependencies
+
+DEPENDENCY HANDLING:
+- PDF Processing: Automatically detects PyMuPDF or PyPDF2, falls back to text input
+- Web Crawling: Uses Exa AI if available, otherwise uses comprehensive mock data
+- Core Features: Always available with just streamlit and pandas
+
+This version handles missing dependencies gracefully and provides multiple
+input methods, making it accessible even in restricted environments.
+
+USAGE EXAMPLES:
+
+1. Full Installation:
+   pip install streamlit pandas PyMuPDF exa_py
+   # Enables all features: PDF upload + real web crawling
+
+2. Partial Installation:
+   pip install streamlit pandas PyMuPDF
+   # Enables PDF upload + demo mode with mock data
+
+3. Minimal Installation:
+   pip install streamlit pandas
+   # Text input only + demo mode with mock data
+
+4. Testing with Sample Data:
+   # Click "Use Sample CV Text" button for immediate testing
+   # No additional setup required
+
+The application automatically adapts to available dependencies and
+provides clear feedback about what features are enabled/disabled.
+""" crawling (with Exa AI)
 ✅ Interactive Streamlit interface
 ✅ Progress tracking and status updates
 ✅ Error handling and recovery
