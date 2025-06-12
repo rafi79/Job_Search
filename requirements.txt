@@ -1,3 +1,86 @@
+# Academic Job Search Agent - Requirements
+# Core dependencies for the AI Academic Job Search Agent for Bangladesh
+
+# ===== CORE REQUIREMENTS (Always needed) =====
 streamlit>=1.28.0
 pandas>=1.5.0
-exa_py>=1.0.0
+
+# ===== PDF PROCESSING (Choose one or both) =====
+# Option 1: PyMuPDF (Recommended - better text extraction)
+PyMuPDF>=1.23.0
+
+# Option 2: PyPDF2 (Alternative - basic PDF support)
+# PyPDF2>=3.0.0
+# Uncomment above line if you prefer PyPDF2 or PyMuPDF fails
+
+# ===== WEB CRAWLING (Optional - enables real data) =====
+# Exa AI for real web crawling and job search
+# exa-py>=1.0.0
+# Uncomment above line to enable real web crawling capabilities
+
+# ===== ADDITIONAL UTILITIES =====
+# For async operations (usually built-in with Python 3.7+)
+# asyncio is built-in, no installation needed
+
+# For regular expressions (built-in)
+# re is built-in, no installation needed
+
+# For date/time handling (built-in)
+# datetime is built-in, no installation needed
+
+# For file operations (built-in)
+# tempfile, os, json are built-in, no installation needed
+
+# For type hints (built-in with Python 3.5+)
+# typing is built-in, no installation needed
+
+# ===== INSTALLATION INSTRUCTIONS =====
+# 
+# Quick Start (Minimal):
+# pip install -r requirements.txt
+# 
+# This installs core + PDF processing.
+# 
+# For full features including real web crawling:
+# 1. Uncomment the exa-py line above
+# 2. pip install -r requirements.txt
+# 
+# Alternative installations:
+# 
+# Minimal (text input only):
+# pip install streamlit pandas
+# 
+# Basic (PDF + demo mode):
+# pip install streamlit pandas PyMuPDF
+# 
+# Full (PDF + real web crawling):
+# pip install streamlit pandas PyMuPDF exa-py
+#
+# ===== VERSION COMPATIBILITY =====
+# Python 3.8+ recommended
+# Tested on Python 3.8, 3.9, 3.10, 3.11
+# 
+# ===== OPTIONAL DEPENDENCIES =====
+# For enhanced PDF processing:
+# pdfplumber>=0.9.0        # Alternative PDF processing
+# 
+# For better text processing:
+# nltk>=3.8                # Natural language processing
+# spacy>=3.7.0             # Advanced NLP (large download)
+# 
+# For data visualization:
+# matplotlib>=3.7.0        # Plotting
+# seaborn>=0.12.0          # Statistical visualizations
+# plotly>=5.17.0           # Interactive charts
+# 
+# For database operations:
+# sqlalchemy>=2.0.0        # Database ORM
+# sqlite3                  # Built-in with Python
+# 
+# For API development:
+# fastapi>=0.104.0         # Fast API framework
+# uvicorn>=0.24.0          # ASGI server
+# 
+# For advanced async operations:
+# aiohttp>=3.9.0           # Async HTTP client
+# aiofiles>=23.2.1         # Async file operations
