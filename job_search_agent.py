@@ -2,15 +2,34 @@ import streamlit as st
 import json
 import time
 from datetime import datetime
-from exa_py import Exa
 import re
 from typing import List, Dict, Any
 import pandas as pd
 
+# Try to import Exa, fall back to mock if not available
+try:
+    from exa_py import Exa
+    EXA_AVAILABLE = True
+except ImportError:
+    EXA_AVAILABLE = False
+    st.error("""
+    **⚠️ Exa package not found!**
+    
+    To use real web crawling, install the exa package:
+    ```
+    pip install exa_py
+    ```
+    
+    For now, the app will run in **demo mode** with mock data.
+    """)
+
 # Initialize Exa client
 @st.cache_resource
 def init_exa():
-    return Exa(api_key="ee6f2bad-90d7-442c-a892-6f5cf2f611ab")
+    if EXA_AVAILABLE:
+        return Exa(api_key="ee6f2bad-90d7-442c-a892-6f5cf2f611ab")
+    else:
+        return None
 
 # Initialize session state for memory
 if 'memory' not in st.session_state:
@@ -142,7 +161,14 @@ class JobSearchAgent:
         return base_terms[:5]  # Limit to 5 search terms
     
     def execute_search(self, plan: Dict, filters: Dict) -> List[Dict]:
-        """Step 2: Search Phase using Exa AI"""
+        """Step 2: Search Phase using Exa AI or Mock Data"""
+        if self.exa and EXA_AVAILABLE:
+            return self._execute_real_search(plan, filters)
+        else:
+            return self._execute_mock_search(plan, filters)
+    
+    def _execute_real_search(self, plan: Dict, filters: Dict) -> List[Dict]:
+        """Real search using Exa AI"""
         all_results = []
         
         for search_term in plan['search_terms']:
@@ -171,6 +197,19 @@ class JobSearchAgent:
         # Remove duplicates and sort by relevance
         unique_jobs = self.deduplicate_jobs(all_results)
         return sorted(unique_jobs, key=lambda x: x.get('relevance_score', 0), reverse=True)[:20]
+    
+    def _execute_mock_search(self, plan: Dict, filters: Dict) -> List[Dict]:
+        """Mock search for demonstration when Exa is not available"""
+        # Simulate search delay
+        time.sleep(2)
+        
+        # Mock job data based on search intent
+        mock_jobs = self._generate_mock_jobs(plan)
+        
+        # Apply filters
+        filtered_jobs = [job for job in mock_jobs if self.apply_logic_gates(job, filters)]
+        
+        return filtered_jobs[:20]
     
     def extract_job_info(self, exa_result, keywords: List[str]) -> Dict:
         """Extract job information from Exa search result"""
@@ -445,6 +484,130 @@ class JobSearchAgent:
             summary_parts.append(f"Most results from: {top_source[0]} ({top_source[1]} jobs)")
         
         return ". ".join(summary_parts) + "."
+    
+    def _generate_mock_jobs(self, plan: Dict) -> List[Dict]:
+        """Generate mock jobs based on search intent for demo purposes"""
+        intent = plan.get('intent', 'general_search')
+        keywords = plan.get('keywords', [])
+        
+        # Base mock jobs that adapt to search intent
+        base_jobs = [
+            {
+                'id': 1,
+                'title': 'Senior Software Engineer',
+                'company': 'TechCorp AI',
+                'location': 'Remote',
+                'salary': '$120,000 - $150,000',
+                'job_type': 'Full-time',
+                'experience': 'Senior',
+                'description': 'Join our AI team building next-generation applications with Python and machine learning.',
+                'url': 'https://techcorp.ai/careers/senior-engineer',
+                'tags': ['Python', 'AI/ML', 'Remote', 'Senior'],
+                'relevance_score': 95,
+                'source': 'Company Website'
+            },
+            {
+                'id': 2,
+                'title': 'Frontend Developer',
+                'company': 'WebSolutions Inc',
+                'location': 'New York, NY',
+                'salary': '$80,000 - $100,000',
+                'job_type': 'Full-time',
+                'experience': 'Mid-level',
+                'description': 'Create beautiful user interfaces with React and TypeScript for modern web applications.',
+                'url': 'https://websolutions.com/jobs/frontend-dev',
+                'tags': ['React', 'TypeScript', 'Frontend', 'Mid-level'],
+                'relevance_score': 87,
+                'source': 'LinkedIn'
+            },
+            {
+                'id': 3,
+                'title': 'Data Scientist',
+                'company': 'DataDriven Co',
+                'location': 'San Francisco, CA',
+                'salary': '$110,000 - $140,000',
+                'job_type': 'Full-time',
+                'experience': 'Senior',
+                'description': 'Analyze complex datasets and build predictive models using Python and machine learning.',
+                'url': 'https://datadriven.co/careers/data-scientist',
+                'tags': ['Python', 'Data Science', 'ML', 'Senior'],
+                'relevance_score': 92,
+                'source': 'Indeed'
+            },
+            {
+                'id': 4,
+                'title': 'Junior Web Developer',
+                'company': 'StartupXYZ',
+                'location': 'Austin, TX',
+                'salary': '$55,000 - $70,000',
+                'job_type': 'Full-time',
+                'experience': 'Junior',
+                'description': 'Great opportunity for new graduates to learn and grow with modern web technologies.',
+                'url': 'https://startupxyz.com/jobs/junior-dev',
+                'tags': ['JavaScript', 'HTML/CSS', 'Junior', 'Growth'],
+                'relevance_score': 78,
+                'source': 'Glassdoor'
+            },
+            {
+                'id': 5,
+                'title': 'DevOps Engineer',
+                'company': 'CloudFirst',
+                'location': 'Remote',
+                'salary': '$95,000 - $125,000',
+                'job_type': 'Contract',
+                'experience': 'Mid-level',
+                'description': 'Manage cloud infrastructure and deployment pipelines using AWS and Kubernetes.',
+                'url': 'https://cloudfirst.io/careers/devops',
+                'tags': ['AWS', 'Docker', 'Kubernetes', 'Remote'],
+                'relevance_score': 89,
+                'source': 'Stack Overflow'
+            },
+            {
+                'id': 6,
+                'title': 'Machine Learning Engineer',
+                'company': 'AI Innovations',
+                'location': 'Remote',
+                'salary': '$130,000 - $160,000',
+                'job_type': 'Full-time',
+                'experience': 'Senior',
+                'description': 'Build and deploy ML models at scale using TensorFlow and PyTorch.',
+                'url': 'https://aiinnovations.com/jobs/ml-engineer',
+                'tags': ['Python', 'TensorFlow', 'PyTorch', 'ML'],
+                'relevance_score': 96,
+                'source': 'Wellfound'
+            }
+        ]
+        
+        # Adjust jobs based on search intent
+        if intent == 'remote_work':
+            # Prioritize remote jobs
+            for job in base_jobs:
+                if job['location'] == 'Remote':
+                    job['relevance_score'] += 10
+        elif intent == 'ai_ml':
+            # Boost AI/ML related jobs
+            for job in base_jobs:
+                if any(tag in ['AI/ML', 'ML', 'Data Science', 'TensorFlow', 'PyTorch'] for tag in job['tags']):
+                    job['relevance_score'] += 15
+        elif intent == 'senior_roles':
+            # Boost senior positions
+            for job in base_jobs:
+                if job['experience'] == 'Senior':
+                    job['relevance_score'] += 12
+        elif intent == 'entry_level':
+            # Boost junior positions
+            for job in base_jobs:
+                if job['experience'] == 'Junior':
+                    job['relevance_score'] += 15
+        
+        # Adjust relevance based on keyword matches
+        for job in base_jobs:
+            for keyword in keywords:
+                job_text = f"{job['title']} {job['description']} {' '.join(job['tags'])}".lower()
+                if keyword.lower() in job_text:
+                    job['relevance_score'] = min(100, job['relevance_score'] + 5)
+        
+        return base_jobs
 
 def main():
     st.set_page_config(
@@ -459,7 +622,11 @@ def main():
     
     # Header
     st.title("🤖 AI Job Search Agent")
-    st.markdown("**Multi-step workflow: Plan → Search → Summarize with Exa AI Web Crawling**")
+    if EXA_AVAILABLE:
+        st.markdown("**Multi-step workflow: Plan → Search → Summarize with Exa AI Web Crawling**")
+    else:
+        st.markdown("**Multi-step workflow: Plan → Search → Summarize (Demo Mode)**")
+        st.info("💡 Install `exa_py` package to enable real web crawling capabilities!")
     st.markdown("---")
     
     # Sidebar for filters
