@@ -1601,20 +1601,70 @@ Skills: Python, Research Methodology, Statistical Analysis, Teaching
         if 'sample_cv_text' in st.session_state:
             cv_text = st.session_state['sample_cv_text']
             with tab2:
-                st.text_area(
+                cv_text = st.text_area(
                     "Sample CV loaded - you can edit this or use as-is:",
                     value=cv_text,
                     height=300,
                     key="sample_cv_display"
                 )
-            # Remove the sample from session state after showing
             del st.session_state['sample_cv_text']
     
     # Display results if available
     if st.session_state.workflow_step in ['analyzing', 'researching', 'searching', 'matching', 'complete']:
         
         # Step 1: CV Analysis
-        display_cv_analysis()
+        if st.session_state.cv_analysis:
+            st.header("🧠 Step 1: CV Analysis Results")
+            cv_profile = st.session_state.cv_analysis
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("👤 Personal Information")
+                personal_info = cv_profile.get('personal_info', {})
+                if personal_info.get('name'):
+                    st.write(f"**Name:** {personal_info['name']}")
+                if personal_info.get('email'):
+                    st.write(f"**Email:** {personal_info['email']}")
+                if personal_info.get('phone'):
+                    st.write(f"**Phone:** {personal_info['phone']}")
+                
+                st.subheader("🎓 Education Background")
+                for edu in cv_profile.get('education', []):
+                    st.write(f"• **{edu['degree']}** in {edu['field']}")
+                    if edu.get('institution'):
+                        st.write(f"  📍 {edu['institution']}")
+            
+            with col2:
+                st.subheader("🔬 Specializations")
+                specializations = cv_profile.get('specializations', [])
+                if specializations:
+                    spec_text = " • ".join(specializations)
+                    st.write(f"**Fields:** {spec_text}")
+                else:
+                    st.write("No specializations identified")
+                
+                st.subheader("💻 Skills")
+                skills = cv_profile.get('skills', [])
+                if skills:
+                    for i in range(0, len(skills), 3):
+                        skill_cols = st.columns(3)
+                        for j, skill in enumerate(skills[i:i+3]):
+                            with skill_cols[j]:
+                                st.write(f"• {skill}")
+                else:
+                    st.write("No specific skills identified")
+            
+            if cv_profile.get('publications'):
+                st.subheader("📚 Publications Found")
+                with st.expander("View Publications"):
+                    for pub in cv_profile['publications'][:5]:
+                        st.write(f"• {pub}")
+            
+            if cv_profile.get('research_experience'):
+                st.subheader("🔬 Research Experience")
+                for exp in cv_profile['research_experience']:
+                    st.write(f"• {exp['position']} at {exp['institution']}")
         
         # Step 2: Universities
         if st.session_state.workflow_step in ['researching', 'searching', 'matching', 'complete']:
@@ -1757,11 +1807,11 @@ def display_sample_results():
         
         with col1:
             st.subheader("📊 What You'll Get")
-            st.write("✅ **CV Analysis**: Education, skills, and research experience extraction")
-            st.write("✅ **University Research**: 50+ universities across Bangladesh")
-            st.write("✅ **Job Matching**: AI-powered compatibility scoring")
-            st.write("✅ **Recommendations**: Personalized application strategies")
-            st.write("✅ **Market Insights**: Competition analysis and trends")
+            st.write("• **CV Analysis**: Education, skills, and research experience extraction")
+            st.write("• **University Research**: 50+ universities across Bangladesh")
+            st.write("• **Job Matching**: AI-powered compatibility scoring")
+            st.write("• **Recommendations**: Personalized application strategies")
+            st.write("• **Market Insights**: Competition analysis and trends")
         
         with col2:
             st.subheader("🎯 Sample Match Results")
