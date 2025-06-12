@@ -1914,22 +1914,3 @@ USAGE EXAMPLES:
    # Click "Use Sample CV Text" button for immediate testing
    # No additional setup required
 
-The application automatically adapts to available dependencies and
-provides clear feedback about what features are enabled/disabled.
-""" crawling (with Exa AI)
-✅ Interactive Streamlit interface
-✅ Progress tracking and status updates
-✅ Error handling and recovery
-✅ Debug tools and performance monitoring
-✅ Responsive design and user experience
-✅ Sample data for demonstration
-✅ Help documentation and tips
-✅ Session state management
-✅ File upload and temporary storage
-✅ Comprehensive result display
-✅ Export and sharing capabilities
-
-This is a production-ready academic job search agent that demonstrates
-sophisticated AI agent capabilities including document processing,
-web research, intelligent matching, and personalized recommendations.
-"""
